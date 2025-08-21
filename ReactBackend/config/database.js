@@ -4,24 +4,21 @@ const pool = mysql.createPool({
   host: process.env.DB_HOST || 'localhost',
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'blog_db',
+  database: process.env.DB_NAME || 'projectdb',
   port: process.env.DB_PORT || 3306,
   waitForConnections: true,
   connectionLimit: 10,
-  queueLimit: 0,
-  acquireTimeout: 60000,
-  timeout: 60000,
-  reconnect: true
+  queueLimit: 0
 });
 
 // Create database and tables if they don't exist
 const initializeDatabase = async () => {
   try {
     // Create database
-    await pool.promise().query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'blog_db'}`);
+    await pool.promise().query(`CREATE DATABASE IF NOT EXISTS ${process.env.DB_NAME || 'projectdb'}`);
     
     // Use the database
-    await pool.promise().query(`USE ${process.env.DB_NAME || 'blog_db'}`);
+    await pool.promise().query(`USE ${process.env.DB_NAME || 'projectdb'}`);
     
     // Create users table
     await pool.promise().query(`
@@ -38,6 +35,70 @@ const initializeDatabase = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       )
     `);
+
+    // Auto-migrate: ensure 'role' column exists on pre-existing databases
+    try {
+      const [roleCol] = await pool.promise().query(
+        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'role'`,
+        [process.env.DB_NAME || 'projectdb']
+      );
+      if (roleCol.length === 0) {
+        await pool.promise().query(
+          `ALTER TABLE users ADD COLUMN role ENUM('user','admin') DEFAULT 'user'`
+        );
+        console.log("Auto-migrated: added 'role' column to users table");
+      }
+    } catch (migrationError) {
+      console.warn('Auto-migration check failed (continuing):', migrationError.message);
+    }
+
+    // Auto-migrate: ensure 'full_name' column exists
+    try {
+      const [fullNameCol] = await pool.promise().query(
+        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'full_name'`,
+        [process.env.DB_NAME || 'projectdb']
+      );
+      if (fullNameCol.length === 0) {
+        await pool.promise().query(
+          `ALTER TABLE users ADD COLUMN full_name VARCHAR(100) NULL`
+        );
+        console.log("Auto-migrated: added 'full_name' column to users table");
+      }
+    } catch (migrationError) {
+      console.warn('Auto-migration check failed (continuing):', migrationError.message);
+    }
+
+    // Auto-migrate: ensure 'avatar' column exists
+    try {
+      const [avatarCol] = await pool.promise().query(
+        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'avatar'`,
+        [process.env.DB_NAME || 'projectdb']
+      );
+      if (avatarCol.length === 0) {
+        await pool.promise().query(
+          `ALTER TABLE users ADD COLUMN avatar VARCHAR(255) NULL`
+        );
+        console.log("Auto-migrated: added 'avatar' column to users table");
+      }
+    } catch (migrationError) {
+      console.warn('Auto-migration check failed (continuing):', migrationError.message);
+    }
+
+    // Auto-migrate: ensure 'bio' column exists
+    try {
+      const [bioCol] = await pool.promise().query(
+        `SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'users' AND COLUMN_NAME = 'bio'`,
+        [process.env.DB_NAME || 'projectdb']
+      );
+      if (bioCol.length === 0) {
+        await pool.promise().query(
+          `ALTER TABLE users ADD COLUMN bio TEXT NULL`
+        );
+        console.log("Auto-migrated: added 'bio' column to users table");
+      }
+    } catch (migrationError) {
+      console.warn('Auto-migration check failed (continuing):', migrationError.message);
+    }
     
     // Create posts table
     await pool.promise().query(`

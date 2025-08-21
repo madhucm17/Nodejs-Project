@@ -3,15 +3,15 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: './config.env' });
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 8081;
 
 // Security middleware
 app.use(helmet());
 app.use(cors({
-  origin: ['http://13.126.226.179', 'http://13.126.226.179:3000', 'http://localhost:3000'],
+  origin: ['http://13.126.226.179:8082', 'http://13.126.226.179', 'http://localhost:3000'],
   credentials: true
 }));
 
